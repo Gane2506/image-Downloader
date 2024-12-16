@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="css/popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="title-bar">
+      <h1 class="title">Image Downloader <span class="total-count" id="imageCount">0</span></h1>
+    </div>
+    <div class="header-controls">
+      <button id="refreshButton" class="icon-btn" title="Refresh">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+      <button id="themeToggle" class="icon-btn" title="Toggle theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </button>
+      <button id="settingsBtn" class="icon-btn" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 15c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="mode-toggle-wrapper">
+    <div class="mode-toggle" id="modeToggle">
+      <div class="mode-slider"></div>
+      <div class="mode-labels">
+        <span class="mode-label">Basic</span>
+        <span class="mode-label">Pro</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-buttons">
+    <button id="downloadAll" class="btn btn-primary">Download All</button>
+    <button id="downloadSelected" class="btn btn-secondary">Download Selected</button>
+  </div>
+
+  <div id="proFeatures" class="pro-features">
+    <div class="filters">
+      <div class="filter-group">
+        <label class="filter-label">File Type</label>
+        <div class="filter-options" id="typeFilters"></div>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Size</label>
+        <select id="sizeFilter" class="filter-select">
+          <option value="all">All Sizes</option>
+          <option value="small">Small (<100KB)</option>
+          <option value="medium">Medium (100KB-1MB)</option>
+          <option value="large">Large (>1MB)</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Dimensions</label>
+        <div class="dimension-filters">
+          <select id="dimensionFilter" class="filter-select">
+            <option value="all">All Sizes</option>
+            <option value="small">Small (≤ 32x32)</option>
+            <option value="medium">Medium (≤ 128x128)</option>
+            <option value="large">Large (> 128x128)</option>
+            <option value="custom">Custom</option>
+          </select>
+          <div id="customDimensions" class="custom-dimensions" style="display: none;">
+            <input type="number" id="minWidth" placeholder="Min width">
+            <input type="number" id="minHeight" placeholder="Min height">
+            <input type="number" id="maxWidth" placeholder="Max width">
+            <input type="number" id="maxHeight" placeholder="Max height">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="image-grid-container">
+    <div id="imageGrid" class="image-grid"></div>
+  </div>
+
+  <div class="scroll-indicator" id="scrollIndicator">
+    More images below
+  </div>
+
+  <!-- Settings Panel -->
+  <div id="settingsPanel" class="settings-panel">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button class="close-btn" id="closeSettings">&times;</button>
+    </div>
+    
+    <div class="settings-content">
+      <div class="setting-group">
+        <h3>Download Location</h3>
+        <div class="setting-option">
+          <input type="radio" id="presetPath" name="pathOption" value="preset">
+          <label for="presetPath">Use preset path:</label>
+          <input type="text" id="downloadPath" placeholder="Enter default download path" class="path-input">
+        </div>
+        <div class="setting-option">
+          <input type="radio" id="askPath" name="pathOption" value="ask">
+          <label for="askPath">Ask for path before each download</label>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <h3>File Naming</h3>
+        <div class="setting-option">
+          <input type="checkbox" id="useCustomNaming" name="useCustomNaming">
+          <label for="useCustomNaming">Use custom file naming</label>
+        </div>
+        <div class="setting-option">
+          <label>Base name for files:</label>
+          <input type="text" id="baseFileName" placeholder="image" class="name-input">
+        </div>
+        <div class="setting-preview">
+          Preview: image_1.jpg, image_2.jpg, ...
+        </div>
+      </div>
+
+      <button id="saveSettings" class="btn btn-primary">Save Settings</button>
+    </div>
+  </div>
+
+  <script src="js/popup.js"></script>
+</body>
+</html>
