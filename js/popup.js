@@ -291,46 +291,84 @@ function initializeDownloads() {
 }
 
 async function downloadImages(imagesToDownload) {
-  const { settings = {} } = await chrome.storage.local.get('settings');
-  
-  chrome.runtime.sendMessage({
-    action: 'downloadImages',
-    images: imagesToDownload,
-    settings: settings
-  }, response => {
-    if (response?.success) {
-      showNotification(`Downloading ${imagesToDownload.length} images`);
-    } else {
-      showNotification('Failed to start download', 'error');
-    }
-  });
+  try {
+    const { settings = {} } = await chrome.storage.local.get('settings');
+    const customName = settings.useCustomNaming && settings.baseFileName ? settings.baseFileName : null;
+    
+    imagesToDownload.forEach((img, index) => {
+      const extension = getFileExtension(img.src, img.type);
+      let filename;
+
+      if (customName) {
+        // Use custom name with index for multiple files
+        filename = imagesToDownload.length > 1 
+          ? `${customName}_${index + 1}.${extension}`
+          : `${customName}.${extension}`;
+      } else {
+        // Use default naming
+        filename = `image_${index + 1}.${extension}`;
+      }
+
+      // Add path prefix if set
+      if (settings.downloadPath) {
+        filename = `${settings.downloadPath}/${filename}`;
+      }
+
+      chrome.downloads.download({
+        url: img.src,
+        filename: filename,
+        saveAs: settings.askForPath && index === 0
+      });
+    });
+
+    showNotification(`Downloading ${imagesToDownload.length} images`);
+  } catch (error) {
+    console.error('Download error:', error);
+    showNotification('Failed to download images', 'error');
+  }
 }
 
 function downloadSingleImage(img) {
   chrome.storage.local.get('settings', ({ settings = {} }) => {
-    if (!settings.baseFileName) {
-      // Download with original name
-      chrome.downloads.download({
-        url: img.src,
-        saveAs: true
-      });
-    } else {
-      // Download with custom name but preserve extension
-      const extension = getFileExtension(img.src, img.type);
-      const filename = `${settings.baseFileName}.${extension}`;
-      const downloadPath = settings.downloadPath 
-        ? `${settings.downloadPath}/${filename}` 
-        : filename;
+    const extension = getFileExtension(img.src, img.type);
+    let filename;
 
-      chrome.downloads.download({
-        url: img.src,
-        filename: downloadPath,
-        saveAs: true
-      });
+    if (settings.useCustomNaming && settings.baseFileName) {
+      filename = `${settings.baseFileName}.${extension}`;
+    } else {
+      filename = img.filename || `image.${extension}`;
     }
+
+    if (settings.downloadPath) {
+      filename = `${settings.downloadPath}/${filename}`;
+    }
+
+    chrome.downloads.download({
+      url: img.src,
+      filename: filename,
+      saveAs: settings.askForPath
+    });
   });
 
   showNotification('Image downloaded successfully');
+}
+
+function getFileExtension(url, type) {
+  // Try to get extension from URL
+  const urlExtension = url.split('.').pop().toLowerCase().split(/[#?]/)[0];
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(urlExtension)) {
+    return urlExtension;
+  }
+
+  // Try to get from mime type
+  if (type) {
+    const mimeExtension = type.split('/')[1];
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(mimeExtension)) {
+      return mimeExtension;
+    }
+  }
+
+  return 'jpg';
 }
 
 function initializeSettings() {
@@ -345,19 +383,15 @@ function initializeSettings() {
     // Load saved settings
     chrome.storage.local.get('settings', ({ settings = {} }) => {
       if (useCustomNaming) {
-        useCustomNaming.checked = Boolean(settings.baseFileName);
+        useCustomNaming.checked = settings.useCustomNaming || false;
       }
-      
       if (baseFileNameInput) {
         baseFileNameInput.value = settings.baseFileName || '';
-        baseFileNameInput.disabled = !settings.baseFileName;
+        baseFileNameInput.disabled = !settings.useCustomNaming;
       }
-      
-      const downloadPathInput = document.getElementById('downloadPath');
-      if (downloadPathInput) {
-        downloadPathInput.value = settings.downloadPath || '';
+      if (document.getElementById('downloadPath')) {
+        document.getElementById('downloadPath').value = settings.downloadPath || '';
       }
-      
       const pathOption = settings.askForPath ? 'ask' : 'preset';
       const radioInput = document.querySelector(`input[value="${pathOption}"]`);
       if (radioInput) {
@@ -380,14 +414,17 @@ function initializeSettings() {
     useCustomNaming?.addEventListener('change', (e) => {
       if (baseFileNameInput) {
         baseFileNameInput.disabled = !e.target.checked;
-        baseFileNameInput.value = e.target.checked ? 'image' : '';
+        if (!e.target.checked) {
+          baseFileNameInput.value = '';
+        }
       }
     });
 
     // Save settings
     saveSettings?.addEventListener('click', () => {
       const settings = {
-        baseFileName: useCustomNaming?.checked ? baseFileNameInput?.value || 'image' : '',
+        useCustomNaming: useCustomNaming?.checked || false,
+        baseFileName: useCustomNaming?.checked ? baseFileNameInput?.value?.trim() : '',
         downloadPath: document.getElementById('downloadPath')?.value?.trim() || '',
         askForPath: document.querySelector('input[name="pathOption"]:checked')?.value === 'ask'
       };
